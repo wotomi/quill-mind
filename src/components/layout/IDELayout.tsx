@@ -1,13 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FilePanel } from "../panels/FilePanel";
 import { EditorPanel } from "../panels/EditorPanel"; 
 import { ChatPanel } from "../panels/ChatPanel";
 import { TopBar } from "./TopBar";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { apiService } from "@/services/api";
+import { useToast } from "@/hooks/use-toast";
 
 export const IDELayout = () => {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
+  const { toast } = useToast();
+
+  const handleFileSelect = async (filename: string) => {
+    if (!filename) {
+      setSelectedFile(null);
+      setFileContent("");
+      return;
+    }
+
+    setSelectedFile(filename);
+    // Content will be loaded by EditorPanel
+  };
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -19,11 +33,7 @@ export const IDELayout = () => {
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
             <FilePanel 
               selectedFile={selectedFile}
-              onFileSelect={(filename) => {
-                setSelectedFile(filename);
-                // In real implementation, fetch file content here
-                setFileContent(`# ${filename}\n\nContent of ${filename}...`);
-              }}
+              onFileSelect={handleFileSelect}
             />
           </ResizablePanel>
 

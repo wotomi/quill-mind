@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Send, 
   Bot, 
@@ -11,9 +12,11 @@ import {
   FileText,
   Copy,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiService, AIAgentRequest } from "@/services/api";
 
 interface ChatPanelProps {
   selectedFile: string | null;
@@ -25,37 +28,31 @@ interface Message {
   content: string;
   timestamp: Date;
   fileContext?: string;
+  loading?: boolean;
 }
 
 export const ChatPanel = ({ selectedFile }: ChatPanelProps) => {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "ai",
-      content: "Hello! I'm your AI assistant. I can help you with writing, editing, and improving your markdown documents. How can I assist you today?",
-      timestamp: new Date(),
-    },
-    {
-      id: "2", 
-      type: "user",
-      content: "Can you help me improve the structure of my README file?",
-      timestamp: new Date(),
-      fileContext: "README.md"
-    },
-    {
-      id: "3",
-      type: "ai", 
-      content: "I'd be happy to help improve your README structure! Here are some suggestions:\n\n1. **Clear title and description** - Make sure your project name and purpose are immediately clear\n2. **Installation instructions** - Step-by-step setup guide\n3. **Usage examples** - Show how to use your project\n4. **Contributing guidelines** - Help others contribute\n\nWould you like me to analyze your current README and suggest specific improvements?",
-      timestamp: new Date(),
-      fileContext: "README.md"
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  // Initialize with welcome message
+  useEffect(() => {
+    if (messages.length === 0) {
+      setMessages([{
+        id: "welcome",
+        type: "ai",
+        content: "Hello! I'm your AI assistant. I can help you with writing, editing, and improving your markdown documents. How can I assist you today?",
+        timestamp: new Date(),
+      }]);
     }
-  ]);
+  }, []);
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const handleSendMessage = async () => {
+    if (!message.trim() || isLoading) return;
 
-    const newMessage: Message = {
+    const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
       content: message,
@@ -63,20 +60,49 @@ export const ChatPanel = ({ selectedFile }: ChatPanelProps) => {
       fileContext: selectedFile || undefined
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    setMessages(prev => [...prev, userMessage]);
+    const currentMessage = message;
     setMessage("");
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
+    try {
+      const agentRequest: AIAgentRequest = {
+        message: currentMessage,
+        filename: selectedFile || undefined,
+        action_type: 'analyze'
+      };
+
+      const response = await apiService.aiAgentAction(agentRequest);
+
+      const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: "ai",
-        content: `I understand you want help with "${message}". Let me analyze this in the context of ${selectedFile || "your current work"} and provide some suggestions...`,
+        content: response.response,
         timestamp: new Date(),
         fileContext: selectedFile || undefined
       };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      toast({
+        title: "AI Error",
+        description: error instanceof Error ? error.message : "Failed to get AI response",
+        variant: "destructive",
+      });
+
+      // Add error message to chat
+      const errorMessage: Message = {
+        id: (Date.now() + 2).toString(),
+        type: "ai",
+        content: "I apologize, but I'm having trouble processing your request right now. Please try again.",
+        timestamp: new Date(),
+        fileContext: selectedFile || undefined
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -165,21 +191,26 @@ export const ChatPanel = ({ selectedFile }: ChatPanelProps) => {
       {/* Input */}
       <div className="p-4 border-t border-panel-border">
         <div className="flex gap-2">
-          <Input
-            placeholder="Ask AI about your document..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-            className="flex-1 bg-background border-border"
-          />
-          <Button 
-            onClick={handleSendMessage}
-            disabled={!message.trim()}
-            size="sm"
-            className="bg-gradient-ai hover:opacity-90"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+            <Input
+              placeholder="Ask AI about your document..."
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
+              disabled={isLoading}
+              className="flex-1 bg-background border-border"
+            />
+            <Button 
+              onClick={handleSendMessage}
+              disabled={!message.trim() || isLoading}
+              size="sm"
+              className="bg-gradient-ai hover:opacity-90"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
         </div>
         
         <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
