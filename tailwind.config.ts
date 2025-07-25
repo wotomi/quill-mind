@@ -61,7 +61,30 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// IDE-specific colors
+				editor: 'hsl(var(--editor-background))',
+				'panel-border': 'hsl(var(--panel-border))',
+				'panel-header': 'hsl(var(--panel-header))',
+				'active-tab': 'hsl(var(--active-tab))',
+				'hover-accent': 'hsl(var(--hover-accent))',
+				'diff-added': 'hsl(var(--diff-added))',
+				'diff-removed': 'hsl(var(--diff-removed))',
+				'ai-accent': 'hsl(var(--ai-accent))',
+				'file-tree': 'hsl(var(--file-tree))'
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-ai': 'var(--gradient-ai)',
+				'gradient-subtle': 'var(--gradient-subtle)'
+			},
+			boxShadow: {
+				'panel': 'var(--shadow-panel)',
+				'glow': 'var(--shadow-glow)'
+			},
+			transitionTimingFunction: {
+				'smooth': 'var(--transition-smooth)',
+				'fast': 'var(--transition-fast)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
